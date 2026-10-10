@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>V8 Engine in Motion</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600&family=Archivo+Black&display=swap">
+<style>
+:root{
+  --bg:#fde7ef; --ink:#000; --panel:#fff; --muted:#4d3a42; --a:#ff2e7e; --b:#00c2d1; --barh:120px;
+  box-sizing:border-box;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0d1117;--ink:#f1f1f1;--panel:#171c26;--muted:#a6adbb;--a:#ff4d94;--b:#35e0ee}}
+:root[data-theme="dark"]{--bg:#0d1117;--ink:#f1f1f1;--panel:#171c26;--muted:#a6adbb;--a:#ff4d94;--b:#35e0ee}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Archivo",Arial,sans-serif;line-height:1.5;padding-bottom:env(safe-area-inset-bottom,0px)}
+.bar{position:sticky;top:0;z-index:10;background:var(--panel);border-bottom:4px solid var(--ink);padding:calc(8px + env(safe-area-inset-top,0px)) 14px 8px}
+.bar .in{max-width:900px;margin:0 auto}
+.r1{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.r1 b{font-family:"Archivo Black","Arial Black",sans-serif;font-weight:400;font-size:1.05rem}
+.ctl{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0}
+button{font:inherit;font-weight:600;color:var(--ink);background:var(--panel);border:3px solid var(--ink);padding:3px 12px;cursor:pointer}
+button:hover{background:var(--b);color:#000}
+button:focus-visible{outline:4px solid var(--a);outline-offset:2px}
+.seg{display:grid;grid-template-columns:repeat(12,1fr);gap:4px}
+.seg button{padding:0;height:14px}
+.seg .done{background:var(--ink)}.seg .cur{background:var(--a)}
+main{max-width:900px;margin:0 auto;padding:20px 14px 70vh}
+header{border:4px solid var(--ink);background:var(--panel);padding:16px;box-shadow:8px 8px 0 var(--a);margin-bottom:24px}
+h1{font-family:"Archivo Black","Arial Black",sans-serif;font-weight:400;font-size:clamp(2rem,7vw,3.6rem);line-height:.95;margin:0 0 8px}
+header p{margin:0;color:var(--muted)}
+.item{scroll-margin-top:calc(var(--barh) + 12px);border:4px solid var(--ink);background:var(--panel);padding:16px;margin-bottom:24px;box-shadow:8px 8px 0 var(--b);animation:rise .6s ease both;transition:opacity .4s}
+.item.old{opacity:.5;box-shadow:none}
+@keyframes rise{from{transform:translateY(50px);opacity:0}}
+.item h2{font-family:"Archivo Black","Arial Black",sans-serif;font-weight:400;margin:0 0 12px;font-size:1.4rem}
+.item p{margin:12px 0 0}
+.anim{background:var(--bg);padding:14px}
+.static,.static *{animation:none!important}
+.chip{display:inline-block;padding:1px 10px;margin:2px;font-weight:600;font-size:.85rem;background:var(--b);color:#000}
+.term{font-family:ui-monospace,Menlo,Consolas,monospace;background:var(--ink);color:var(--bg);padding:10px 12px;margin-bottom:12px}
+.typed{display:inline-block;overflow:hidden;white-space:nowrap;vertical-align:bottom;width:14ch;animation:type 1.4s steps(14) both}
+@keyframes type{from{width:0}}
+.caret{display:inline-block;width:.6ch;height:1.1em;background:var(--a);vertical-align:bottom;animation:blink .8s steps(2) infinite}
+@keyframes blink{50%{opacity:0}}
+.copy{display:grid;grid-template-columns:minmax(0,1fr) 40px minmax(0,1fr);gap:8px;align-items:center}
+.arrow{font-family:"Archivo Black",sans-serif;font-size:1.6rem;text-align:center;animation:nudge .7s ease-in-out infinite alternate}
+@keyframes nudge{to{transform:translateX(7px)}}
+.mem{position:relative;overflow:hidden;background:var(--panel);padding:10px;min-height:96px}
+.mem b{display:block;font-family:"Archivo Black","Arial Black",sans-serif;font-weight:400;font-size:.9rem;margin-bottom:4px}
+.disk::after{content:"";position:absolute;top:0;bottom:0;width:6px;background:var(--a);opacity:.7;animation:sweep 1.6s linear infinite}
+@keyframes sweep{from{left:-6px}to{left:100%}}
+.led{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--a);margin-left:6px;animation:blink .6s steps(2) infinite}
+.rd{animation:rd .6s ease-in-out infinite alternate}
+@keyframes rd{to{background:var(--a)}}
+.fly{animation:fly 1.4s cubic-bezier(.5,-.2,.3,1.2) both}
+@keyframes fly{from{transform:translateX(-280%);opacity:0}}
+.ramc{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;margin-top:8px}
+.ramc i{height:20px;background:var(--bg)}
+.ramc i.fb{background:var(--b)}.ramc i.fa{background:var(--a)}
+.ramc i.nw{animation:fillc .3s var(--d,0s) both}
+@keyframes fillc{from{background:var(--bg);transform:scale(.4)}}
+.ramc.idle i{animation:flick 1.2s var(--d,0s) ease-in-out infinite alternate}
+@keyframes flick{from{opacity:.25}}
+.pop{animation:pop .45s var(--d,0s) both}
+@keyframes pop{from{transform:scale(0);opacity:0}}
+.node{display:block;width:fit-content;background:var(--b);color:#000;font-weight:600;font-size:.85rem;padding:0 8px;margin:4px 0}
+.src{margin:0 0 10px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.9rem;overflow-x:auto}
+.tree{width:100%;height:auto;display:block}
+.ln2{stroke:var(--ink);stroke-width:3;stroke-dasharray:200;animation:draw .5s var(--d,0s) both}
+@keyframes draw{from{stroke-dashoffset:200}}
+.tn{transform-box:fill-box;transform-origin:center;animation:pop .4s var(--d,0s) both}
+.tn rect{fill:var(--b)}.tn.r rect{fill:var(--a)}
+.tn text{fill:#000;font:600 13px Archivo,Arial,sans-serif}
+.two{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:12px}
+.ln{padding:2px 8px;border-left:6px solid transparent;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.85rem;animation:slide .5s var(--d,0s) both}
+@keyframes slide{from{opacity:0;transform:translateX(-14px)}}
+.ln.hit{animation:hit 2.1s var(--d,0s) infinite}
+@keyframes hit{0%,33%{background:var(--a);color:#000;border-left-color:var(--ink)}34%,100%{background:transparent}}
+.note div{animation:slide .5s .3s both;font-size:.9rem}
+.cells{display:grid;grid-template-columns:repeat(10,1fr);gap:4px;margin:6px 0}
+.cells i{height:22px;background:var(--a);animation:fillc .3s var(--d,0s) both}
+.an{max-height:0;opacity:0;overflow:hidden;animation:exit 4.2s both}
+@keyframes exit{0%,78%{max-height:340px;opacity:1;transform:none}100%{max-height:0;opacity:0;transform:translateX(100%)}}
+.an .l{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.8rem;animation:slide .3s var(--d,0s) both}
+.stamp{display:inline-block;margin-top:6px;border:4px solid var(--a);color:var(--a);font-family:"Archivo Black",sans-serif;padding:0 12px;font-size:1.4rem;transform:rotate(-4deg);animation:pop .4s 2.7s both}
+.callrow{display:grid;grid-template-columns:90px minmax(0,1fr) 90px;gap:10px;align-items:center;animation:fadein .4s 4.3s both;margin-top:4px}
+@keyframes fadein{from{opacity:0}}
+.ring{position:relative}
+.ring::after{content:"";position:absolute;inset:0;border:4px solid var(--a);opacity:0;animation:ringp 1s 4.3s 3 forwards}
+@keyframes ringp{from{opacity:1;transform:scale(1)}to{opacity:0;transform:scale(1.5)}}
+.track{position:relative;height:44px}
+.track::before{content:"";position:absolute;left:0;right:0;top:50%;height:4px;margin-top:-2px;background:repeating-linear-gradient(90deg,var(--ink) 0 8px,transparent 8px 16px)}
+.msg{position:absolute;top:8px;left:98%;transform:translateX(-100%);background:var(--ink);color:var(--bg);font-weight:600;font-size:.8rem;padding:2px 8px;white-space:nowrap;animation:toR 1.4s 4.8s both}
+@keyframes toR{from{left:2%;transform:none}}
+.callrow .t2{animation:throb .4s 6.2s 4 alternate}
+.fn{background:var(--panel);padding:8px 4px;text-align:center}
+.fn b{font-family:"Archivo Black","Arial Black",sans-serif;font-weight:400;font-size:.9rem}
+.fgrid{display:grid;grid-template-columns:90px minmax(0,1fr) 90px;gap:10px;align-items:center}
+.belt{position:relative;height:56px;background:var(--panel);overflow:hidden}
+.belt::before{content:"";position:absolute;left:0;right:0;top:50%;height:6px;margin-top:-3px;background:repeating-linear-gradient(90deg,var(--ink) 0 16px,transparent 16px 32px);animation:belt 1s linear infinite}
+@keyframes belt{to{background-position-x:32px}}
+.blocks{position:absolute;top:10px;left:2%;display:flex;gap:6px}
+.blocks i{font-style:normal;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.75rem;font-weight:600;padding:4px 7px;background:var(--ink);color:var(--bg)}
+.build .blocks i{animation:pop .45s var(--d,0s) both}
+@keyframes throb{to{transform:scale(1.08)}}
+.run .blocks{}
+.run .cpu{background:var(--b);color:#000;animation:throb .4s 6 alternate}
+.back .blocks{opacity:0;animation:keep 3.6s both}
+@keyframes keep{0%,88%{opacity:1}100%{opacity:0}}
+@keyframes gone{from{opacity:1}}
+.back .blocks i{animation:kick 3.4s calc(var(--d,0s)/4) both}
+@keyframes kick{0%,15%{transform:none}35%{transform:translateY(40px) rotate(8deg);background:var(--ink);color:var(--bg);opacity:1}55%,82%{transform:translateY(40px) rotate(8deg);background:var(--a);color:#000;opacity:1}100%{transform:translateY(54px) rotate(12deg);background:var(--a);color:#000;opacity:0}}
+.errtag{display:none;position:absolute;left:50%;top:4px;transform:translateX(-50%);background:var(--a);color:#000;font-weight:600;font-size:.72rem;padding:0 8px;white-space:nowrap}
+.back .errtag{display:block;animation:errin .3s 1.1s both}
+@keyframes errin{from{opacity:0;transform:translateX(-50%) scale(.5)}}
+.back .ig{background:var(--a);color:#000;animation:throb .4s 3s 4 alternate}
+.bad{color:var(--a);font-weight:600}
+.end .gone{opacity:.15;text-decoration:line-through;animation:out 1s var(--d,0s) both}
+@keyframes out{from{opacity:1;text-decoration:none}}
+.try{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap}
+.toast{font-weight:600;margin-top:8px;min-height:1.5em}
+.shake{animation:shake .5s}
+@keyframes shake{20%{transform:translateX(-10px)}40%{transform:translateX(10px)}60%{transform:translateX(-6px)}80%{transform:translateX(6px)}}
+@media (max-width:640px){.two{grid-template-columns:minmax(0,1fr)}.fgrid,.callrow{grid-template-columns:66px minmax(0,1fr) 66px}.blocks i{padding:3px;font-size:.62rem}.copy{grid-template-columns:minmax(0,1fr) 24px minmax(0,1fr)}}
+.belt{height:124px}.belt::before{display:none}
+.cap{position:absolute;right:6px;top:2px;font-size:.7rem;font-weight:600;color:var(--muted)}
+.tb,.fetch,.resume{display:none;position:absolute;font-weight:600;font-size:.72rem;padding:0 8px;white-space:nowrap}
+.blocks{top:30px}
+.tb{background:var(--a);color:#000;left:2%;top:4px}
+.build .tb{display:none}.build .ig{background:var(--a);color:#000;animation:throb .5s 6 alternate}.gh{visibility:hidden}
+.fetch{background:var(--b);color:#000;top:98px;left:98%;transform:translateX(-100%)}
+.run .fetch{display:block;animation:toR 1.2s ease-in-out infinite}
+.resume{background:var(--ink);color:var(--bg);top:98px;left:2%}
+.back .resume{display:block;animation:toL2 1.6s 1.4s ease both}
+@keyframes toL2{from{left:98%;transform:translateX(-100%)}}
+.rdgrid{display:grid;grid-template-columns:96px minmax(0,1fr) 96px;align-items:stretch}
+.rn{display:grid;place-items:center;background:var(--panel);font-family:"Archivo Black","Arial Black",sans-serif;font-size:.9rem;padding:8px 4px;text-align:center}
+.road{position:relative;height:84px;background:var(--panel);overflow:hidden}
+.road::before{content:"";position:absolute;left:0;right:0;top:50%;height:6px;margin-top:-3px;background:repeating-linear-gradient(90deg,var(--ink) 0 16px,transparent 16px 32px);animation:belt 1s linear infinite}
+.stat,.mv{position:absolute;top:28px;display:flex;gap:6px}
+.stat{left:2%}
+.stat i,.mv i{font-style:normal;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.75rem;font-weight:600;padding:4px 7px;background:var(--ink);color:var(--bg)}
+.mv{display:none;left:98%;transform:translateX(-100%)}
+.ft{position:absolute;top:-18px;left:0;font-size:.7rem;font-weight:600;color:var(--a);white-space:nowrap}
+.build .stat i{animation:pop .45s var(--d,0s) both}
+.build .ln{background:var(--a);color:#000;animation:throb .5s 6 alternate}
+.run .mv{display:flex;animation:toR 1.6s ease-in-out infinite}
+.run .rc{background:var(--b);color:#000;animation:throb .4s 8 alternate}
+.back .stat{left:auto;right:2%;opacity:0;animation:keep 3.6s both}
+.back .stat i{animation:kick2 3.4s calc(var(--d,0s)/4) both}
+@keyframes kick2{0%,15%{transform:none}35%{transform:translateY(30px) rotate(8deg);background:var(--ink);color:var(--bg);opacity:1}55%,82%{transform:translateY(30px) rotate(8deg);background:var(--a);color:#000;opacity:1}100%{transform:translateY(46px) rotate(12deg);background:var(--a);color:#000;opacity:0}}
+.back .ln{background:var(--a);color:#000;animation:throb .4s 2.4s 4 alternate}
+#next{transition:opacity .8s}.fade{opacity:.3;pointer-events:none}
+@media (max-width:640px){.rdgrid{grid-template-columns:66px minmax(0,1fr) 66px}.stat i,.mv i{padding:3px;font-size:.62rem}}
+.rd2{position:relative}
+.p-back{padding-top:38px}
+.g2{display:grid;grid-template-columns:92px minmax(0,1fr) 92px;align-items:center}
+.nd{height:44px;display:grid;place-items:center;font-family:"Archivo Black","Arial Black",sans-serif;font-size:.85rem;text-align:center;color:#000}
+.nl{background:var(--a)}.nr{background:var(--b)}
+.rw{position:relative;height:84px;background:var(--panel);overflow:hidden}
+.rw::before{content:"";position:absolute;left:0;right:0;top:50%;height:6px;margin-top:-3px;background:repeating-linear-gradient(90deg,var(--ink) 0 16px,transparent 16px 32px);animation:belt 1s linear infinite}
+.rcap{position:absolute;right:6px;top:2px;font-size:.7rem;font-weight:600;color:var(--muted)}
+.cd,.bcs{position:absolute;top:28px;left:2%;display:flex;gap:6px}
+.cd i,.bcs i{font-style:normal;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.75rem;font-weight:600;padding:4px 7px;background:var(--ink);color:var(--bg)}
+.bcs i{background:var(--b);color:#000}
+.fl{position:absolute;top:-18px;left:0;font-size:.7rem;font-weight:600;color:var(--a)}
+.p-build .cd i{animation:pop .45s var(--d,0s) both}
+.p-build .nl{animation:throb .5s 6 alternate}
+.p-run .cd{left:98%;transform:translateX(-100%);animation:toR2 1.8s ease-in-out both}
+@keyframes toR2{from{left:2%;transform:none}}
+.p-run .fl{animation:fout .4s 1.8s both}
+@keyframes fout{to{opacity:0}}
+.p-run .nr{animation:throb .4s 1.8s 6 alternate}
+.p-back .cd{opacity:0;left:98%;transform:translateX(-100%);animation:keep 3.6s both}
+.p-back .cd i{animation:kick3 3.4s calc(var(--d,0s)/4) both}
+@keyframes kick3{0%,12%{transform:none;box-shadow:none}25%{transform:none;box-shadow:0 0 0 3px var(--a)}40%{transform:translateY(30px) rotate(8deg);box-shadow:0 0 0 3px var(--a);background:var(--ink);color:var(--bg);opacity:1}60%,82%{transform:translateY(30px) rotate(8deg);box-shadow:none;background:var(--a);color:#000;opacity:1}100%{transform:translateY(46px) rotate(12deg);background:var(--a);color:#000;opacity:0;box-shadow:none}}
+.v8b{position:absolute;top:0;left:46px;transform:translateX(-50%);background:var(--ink);color:var(--bg);font-family:"Archivo Black","Arial Black",sans-serif;font-size:.85rem;padding:2px 14px;animation:v8go 4.6s ease-in-out both}
+@keyframes v8go{0%{left:50%}12%,62%{left:78%}86%,100%{left:46px}}
+.p-back .nl{animation:throb .4s 3.9s 4 alternate}
+.p-back .bcs i{animation:pop .4s calc(4.2s + var(--d,0s)) both}
+@media (max-width:640px){.g2{grid-template-columns:62px minmax(0,1fr) 62px}.nd{font-size:.7rem}.cd i,.bcs i{padding:3px;font-size:.62rem}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="bar" id="bar"><div class="in">
+  <div class="r1"><b id="bt"></b><span id="bn"></span></div>
+  <div class="ctl"><button id="prev" type="button">Back</button><button id="play" type="button">Play</button><button id="next" type="button">Next</button><button id="speed" type="button">Speed 1x</button><button id="reset" type="button">Reset</button></div>
+  <div class="seg" id="seg"></div>
+</div></div>
+<main>
+<header><h1>V8 Engine<br>in motion</h1><p><code>node app.js</code> in 12 steps. Press Next or Play. Each step adds its own animation box and scrolls to it, and the controls stay pinned at the top. This is a simplified model: real V8 also has two middle tiers (Sparkplug and Maglev), and numbers, AST names and details like lazy parsing are simplified.</p></header>
+<div id="feed"></div>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const st=(i,s=.25)=>`style="--d:${(i*s).toFixed(2)}s"`;
+const chip=(t,x="")=>`<span class="chip ${x}">${t}</span>`;
+const ram=(p,n,c,idle)=>`<div class="ramc${idle?" idle":""}">${Array.from({length:12},(_,k)=>k<p?`<i class="fb"></i>`:k<p+n?`<i class="${c} nw" style="--d:${(1.5+(k-p)*.25).toFixed(2)}s"></i>`:`<i ${st(k,.1)}></i>`).join("")}</div>`;
+const copy=(a,b,p,n,c)=>`<div class="copy"><div class="mem disk"><b>DISK <span class="led"></span></b>${chip("node",a==="node"?"rd":"")}${chip("app.js",a==="app.js"?"rd":"")}</div><div class="arrow">&rarr;</div><div class="mem"><b>RAM</b>${chip(b,"fly")}${ram(p,n,c)}</div></div>`;
+const bytes=["Ldar a1","Add a0","Return"];
+const fac=ph=>`<div class="rd2 p-${ph}">${ph==="back"?'<span class="v8b">V8</span>':''}<div class="g2"><div class="nd nl">${ph==="back"?"Ignition":"TurboFan"}</div><div class="rw"><span class="rcap">RAM</span><div class="cd">${ph==="run"?'<span class="fl">fetch</span>':''}${["1011","0110","1110","0001"].map((b,n)=>`<i ${st(n,.4)}>${b}</i>`).join("")}</div>${ph==="back"?`<div class="bcs">${bytes.map((x,n)=>`<i ${st(n,.5)}>${x}</i>`).join("")}</div>`:''}</div><div class="nd nr">CPU</div></div></div>`;
+const BC=["Ldar a1 &nbsp;; load b","Add a0, [0] &nbsp;; a + b, note types in slot 0","Return"];
+const TK=["function","add","(","a",",","b",")","{","return","a","+","b",";","}"];
+const TN=[["Program",280,24,100,0,1],["FunctionDeclaration: add",280,84,200,.7],["params: a, b",130,150,120,1.4],["ReturnStatement",410,150,140,1.4],["BinaryExpression (+)",410,216,170,2.2],["a",345,282,44,2.9],["b",475,282,44,2.9]];
+const TL=[[280,38,280,70,.3],[280,98,130,136,1],[280,98,410,136,1],[410,164,410,202,1.8],[410,230,345,268,2.5],[410,230,475,268,2.5]];
+const tree=()=>`<svg class="tree" viewBox="0 0 560 306" role="img" aria-label="Syntax tree of the add function">${TL.map(l=>`<line class="ln2" x1="${l[0]}" y1="${l[1]}" x2="${l[2]}" y2="${l[3]}" style="--d:${l[4]}s"/>`).join("")}${TN.map(n=>`<g class="tn${n[5]?" r":""}" style="--d:${n[4]}s"><rect x="${n[1]-n[3]/2}" y="${n[2]-14}" width="${n[3]}" height="28"/><text x="${n[1]}" y="${n[2]+5}" text-anchor="middle">${n[0]}</text></g>`).join("")}</svg>`;
+const hot=()=>`<div class="an"><div class="mem"><b>CODE ANALYZER (V8's hot-code tracker, watching add)</b>${[0,1,2,3,4].map(n=>`<div class="l" ${st(n,.5)}>add(${n}, 1) &rarr; number + number</div>`).join("")}<div>calls seen: <b data-count="1000" data-dur="2600">1000</b></div><div class="cells">${Array.from({length:10},(_,n)=>`<i ${st(n,.26)}></i>`).join("")}</div><span class="stamp">HOT</span></div></div><div class="callrow"><div class="fn ring"><b>Ignition</b></div><div class="track"><span class="msg">compile add()</span></div><div class="fn t2"><b>TurboFan</b></div></div>`;
+const S=[
+{t:"1. You press Enter",d:"The terminal runs node app.js. The OS finds the node program on disk. Both node and your app.js are just saved files, and nothing is running yet. None of it is in RAM yet.",h:()=>`<div class="term"><span class="typed">$ node app.js</span><span class="caret"></span></div><div class="copy"><div class="mem disk"><b>DISK <span class="led"></span></b>${chip("node","rd")}${chip("app.js","rd")}</div><div class="arrow">&rarr;</div><div class="mem"><b>RAM (nothing of ours yet)</b>${ram(0,0,"",1)}</div></div>`},
+{t:"2. Loading node into RAM",d:"The OS copies node (with V8 inside) from disk into RAM and starts it as a process. The CPU can only fetch code from RAM, so this copy comes first. The file on disk stays.",h:()=>copy("node","node",0,5,"fb")},
+{t:"3. Node reads app.js",d:"Node reads the text of app.js into memory as one long string of characters. Right now it is only text with no meaning yet.",h:()=>copy("app.js","app.js text",5,3,"fa")},
+{t:"4. Parsing, part 1: tokens",d:"The scanner splits the text into tokens, the smallest meaningful pieces, like splitting a sentence into words.",h:()=>`<pre class="src">function add(a, b) { return a + b; }</pre>${TK.map((x,n)=>chip(x,'pop" '+st(n,.18))).join("")}`},
+{t:"5. Parsing, part 2: the AST",d:"The parser arranges the tokens into an AST (Abstract Syntax Tree), a tree that follows JavaScript grammar. A syntax error is caught here, and then nothing runs at all.",ms:6500,h:tree},
+{t:"6. Bytecode",d:"Ignition turns the AST into bytecode: small simple steps. It is not machine code, so the CPU cannot run it directly. Note the [0]: a slot where Ignition will write its feedback.",h:()=>`<div class="two"><div class="mem"><b>AST</b><span class="node">add(a, b)</span><span class="node" style="margin-left:22px">a + b</span></div><div class="mem"><b>BYTECODE (Ignition)</b>${BC.map((l,n)=>`<div class="ln" ${st(n,.7)}>${l}</div>`).join("")}</div></div>`},
+{t:"7. Run and take notes",d:"Ignition runs the bytecode at once. Each time it executes Add, it writes feedback into slot 0: what types it saw.",h:()=>`<div class="two"><div class="mem"><b>IGNITION RUNS</b>${BC.map((l,n)=>`<div class="ln hit" ${st(n,.7)}>${l}</div>`).join("")}</div><div class="mem note"><b>FEEDBACK NOTEBOOK</b><div>slot [0]: number + number</div><div>calls so far: <span data-count="450">450</span></div></div></div>`},
+{t:"8. Hot code found",d:"The code analyzer keeps track of how much add() runs. When it runs a lot, add() is marked HOT, the analyzer steps aside, and V8 asks TurboFan to compile it. (1000 is just an example, and TurboFan compiles in the background while Ignition keeps running.)",ms:8500,h:hot},
+{t:"9. TurboFan builds machine code",d:"TurboFan reads the bytecode and the feedback, guesses the types (always numbers), and builds fast machine code in the background while Ignition keeps running. The blocks are stored in RAM, and nothing is saved to disk.",h:()=>fac("build")},
+{t:"10. CPU runs it fast",d:"The CPU fetches the machine code from RAM and runs it directly (the same fetch from RAM you learned in Sub-topic 1), so the hot part runs at near-native speed. Try throwing a call at it.",h:()=>fac("run")+`<div class="try"><button type="button" data-act="num">add(2, 3)</button><button type="button" data-act="str">add("hi", "there")</button></div><div class="toast" aria-live="polite"></div>`},
+{t:"11. Deoptimization",ms:8000,d:"A string shows up where numbers were always seen. The machine code's quick type check fails, so V8 selects that code at the CPU, pushes it out and discards it. V8 then goes back to Ignition, which keeps running its bytecode and records the new types in its feedback. TurboFan may try again later.",h:()=>fac("back")+`<p class="bad">add("hi", "there"): a is a string! The guess was wrong.</p>`},
+{t:"12. Program ends",d:"Everything in RAM is cleared, including machine code. No executable file is left in your folder, and disk still holds just node and app.js.",h:()=>`<div class="end copy"><div class="mem"><b>DISK</b>${chip("node")}${chip("app.js")}</div><div class="arrow">&rarr;</div><div class="mem"><b>RAM</b>${["node","app.js text","bytecode","machine code"].map((x,n)=>chip(x,'gone" '+st(n,.5))).join("")}</div></div>`}
+];
+const feed=$("feed"),seg=$("seg");let cur=-1,timer=null,speed=1;
+S.forEach((s,n)=>{const b=document.createElement("button");b.type="button";b.title=s.t;b.setAttribute("aria-label",s.t);b.onclick=()=>{stop();go(n)};seg.append(b)});
+function add(n,still){
+  const s=S[n],el=document.createElement("section");el.className="item"+(still?" static":"");
+  el.innerHTML=`<h2>${s.t}</h2><div class="anim">${s.h()}</div><p>${s.d}</p>`;
+  el.querySelectorAll("[data-count]").forEach(c=>{if(still)return;const to=+c.dataset.count,dur=+c.dataset.dur||2200;let t0=null;const f=ts=>{t0=t0||ts;const p=Math.min((ts-t0)/dur,1);c.textContent=Math.round(to*p);if(p<1)requestAnimationFrame(f)};c.textContent=0;requestAnimationFrame(f)});
+  feed.append(el);
+}
+function focusItem(el){
+  bh();const barH=$("bar").offsetHeight,avail=innerHeight-barH,h=el.offsetHeight,top=el.offsetTop;
+  const y=h+24>=avail?top-barH-12:top-barH-(avail-h)/2;
+  scrollTo({top:Math.max(0,y),behavior:"smooth"});
+}
+function go(k){
+  k=Math.max(0,Math.min(S.length-1,k));if(k===cur)return;
+  if(k<cur){while(feed.children.length>k+1)feed.lastChild.remove()}
+  else{for(let n=feed.children.length;n<=k;n++)add(n,n<k)}
+  cur=k;[...feed.children].forEach((e,n)=>e.classList.toggle("old",n<k));
+  $("bt").textContent=S[k].t;$("bn").textContent=(k+1)+"/"+S.length;$("next").classList.toggle("fade",k===S.length-1);$("next").tabIndex=k===S.length-1?-1:0;
+  [...seg.children].forEach((b,n)=>b.className=n<k?"done":n===k?"cur":"");
+  const last=feed.lastChild;requestAnimationFrame(()=>focusItem(last));if(k===7)setTimeout(()=>{if(cur===7)focusItem(last)},4500);
+}
+function stop(){clearTimeout(timer);timer=null;$("play").textContent="Play"}
+function tick(){clearTimeout(timer);timer=setTimeout(()=>{if(cur>=S.length-1){stop();return}go(cur+1);tick()},(S[cur].ms||5200)/speed)}
+$("play").onclick=()=>{if(timer){stop();return}if(cur>=S.length-1){feed.innerHTML="";cur=-1;go(0)}$("play").textContent="Pause";tick()};
+$("next").onclick=()=>{stop();go(cur+1)};$("prev").onclick=()=>{stop();go(cur-1)};
+$("reset").onclick=()=>{stop();feed.innerHTML="";cur=-1;go(0);scrollTo({top:0,behavior:"smooth"})};
+$("speed").onclick=()=>{speed=speed===1?2:1;$("speed").textContent="Speed "+speed+"x";if(timer)tick()};
+feed.addEventListener("click",e=>{
+  const b=e.target.closest("[data-act]");if(!b)return;const item=b.closest(".item"),toast=item.querySelector(".toast");
+  if(b.dataset.act==="num")toast.textContent="Fast path! add(2, 3) passes the machine code's quick type check, so the fast code runs it.";
+  else{item.classList.remove("shake");void item.offsetWidth;item.classList.add("shake");stop();setTimeout(()=>go(cur+1),500)}
+});
+function bh(){document.documentElement.style.setProperty("--barh",$("bar").offsetHeight+"px")}
+addEventListener("resize",bh);bh();go(0);
+</script>
+</body>
+</html>
